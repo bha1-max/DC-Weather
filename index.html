@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dane County Live Weather</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <section class="password-gate" id="passwordGate" aria-label="Password required">
+    <form id="passwordForm" class="password-box">
+      <h1>Dane County Weather</h1>
+      <label for="passwordInput">Password</label>
+      <input id="passwordInput" type="password" autocomplete="current-password">
+      <button type="submit">Enter</button>
+      <p id="passwordError" role="alert"></p>
+    </form>
+  </section>
+  <main class="app">
+    <section class="map-column" aria-label="Live radar map">
+      <header class="site-title">
+        <select id="featureSelect" aria-label="Weather feature">
+          <option value="weather">Dane County Weather</option>
+          <option value="forecast">Forecast</option>
+          <option value="fire">State Fire Risk</option>
+        </select>
+        <div class="live-pill"><span></span> Live</div>
+      </header>
+      <div class="map-shell">
+        <div id="map"></div>
+        <details class="map-toggles" open aria-label="Map visibility controls">
+          <summary>Map Layers</summary>
+          <div class="toggle-options">
+            <label>
+              <input id="toggleDaneCityLabels" type="checkbox" checked>
+              Dane Cities/Villages
+            </label>
+            <label>
+              <input id="toggleDaneLabels" type="checkbox" checked>
+              Dane Townships
+            </label>
+            <label>
+              <input id="toggleRegionalLabels" type="checkbox" checked>
+              Fellow CTV
+            </label>
+            <label>
+              <input id="toggleLightningLayer" type="checkbox">
+              Lightning
+            </label>
+            <label>
+              Map Theme
+              <select id="mapThemeSelect" aria-label="Map theme">
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+              </select>
+            </label>
+          </div>
+        </details>
+        <div class="map-legend" aria-label="Map legend">
+          <span><i class="dane-line"></i>Dane</span>
+          <span><i class="county-line"></i>Fellow Counties</span>
+          <span><i class="extended-line"></i>Extended Counties</span>
+          <span><i class="place-line"></i>Cities/Villages</span>
+          <span><i class="town-line"></i>Towns</span>
+          <span><i class="risk-low"></i>Low</span>
+          <span><i class="risk-moderate"></i>Moderate</span>
+          <span><i class="risk-high"></i>High</span>
+          <span><i class="risk-very-high"></i>Very High</span>
+          <span><i class="risk-extreme"></i>Extreme</span>
+        </div>
+        <div class="radar-tools" aria-label="Radar controls">
+          <button id="refreshRadar" type="button" title="Refresh radar">Refresh</button>
+          <label>
+            Radar
+            <input id="radarOpacity" type="range" min="25" max="90" value="68">
+          </label>
+          <small id="radarStatus">Auto-refresh on</small>
+        </div>
+        <button id="resetFireView" class="fire-reset" type="button" aria-label="Reset Wisconsin view" title="Reset Wisconsin view">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3L4.5 8.9"></path>
+            <path d="M4.5 4.5v4.4h4.4"></path>
+          </svg>
+        </button>
+      </div>
+    </section>
+
+    <aside class="panel" aria-label="Weather dashboard">
+      <section class="clock-block">
+        <span class="eyebrow">Local time</span>
+        <strong id="clock">--:--:--</strong>
+        <small id="dateLine">Dane County, WI</small>
+      </section>
+
+      <section class="conditions">
+        <div class="section-head">
+          <h2>Current Conditions</h2>
+          <button id="refreshWeather" type="button" title="Refresh weather">R</button>
+        </div>
+        <div class="temp-row">
+          <strong id="temperature">-- F</strong>
+          <span id="summary">Loading City-County Bldg weather</span>
+        </div>
+        <div class="metrics">
+          <div><span>Wind</span><strong id="wind">--</strong></div>
+          <div><span>Humidity</span><strong id="humidity">--</strong></div>
+          <div><span>Pressure</span><strong id="pressure">--</strong></div>
+          <div><span>Visibility</span><strong id="visibility">--</strong></div>
+        </div>
+        <p class="data-note" id="obsAge">Observation timestamp pending</p>
+      </section>
+
+      <section class="alerts">
+        <div class="section-head">
+          <h2>Active Alerts</h2>
+          <span id="alertCount">--</span>
+        </div>
+        <div id="alertsList" class="alerts-list">Checking alerts...</div>
+      </section>
+
+      <section class="forecast-panel">
+        <div class="section-head">
+          <h2>Forecast</h2>
+          <button id="refreshForecast" type="button" title="Refresh forecast">R</button>
+        </div>
+        <div id="forecastList" class="forecast-list">Loading forecast...</div>
+      </section>
+
+      <section class="truth">
+        <h2 id="featureTitle">Data Notes</h2>
+        <p id="featureSummary">Current conditions are centered on the City-County Bldg in Madison, using the nearest NWS observation feed for that exact location.</p>
+        <dl id="featureDetails">
+          <div><dt>Location</dt><dd>City-County Bldg</dd></div>
+          <div><dt>Address</dt><dd>210 Martin Luther King Jr Blvd, Madison, WI</dd></div>
+          <div><dt>Radar</dt><dd>NOAA/NWS MRMS</dd></div>
+          <div><dt>Current Conditions</dt><dd>Every 60 seconds</dd></div>
+          <div><dt>Radar/Alerts</dt><dd>Every 60 seconds</dd></div>
+        </dl>
+      </section>
+
+    </aside>
+  </main>
+
+  <aside class="alert-drawer" id="alertDrawer" aria-label="Alert details" aria-hidden="true">
+    <div class="section-head">
+      <h2 id="alertDrawerTitle">Alert Details</h2>
+      <button id="closeAlertDrawer" type="button" title="Close alert details">X</button>
+    </div>
+    <dl id="alertDrawerMeta"></dl>
+    <p id="alertDrawerText"></p>
+    <h3>Safety Notes</h3>
+    <p id="alertDrawerSafety"></p>
+  </aside>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="./script.js"></script>
+</body>
+</html>
